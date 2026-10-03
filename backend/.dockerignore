@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+tests/
+test_*.db
+netsecurelab.db
+scans/*.xml
+reports/*.html
+.git/
+.gitignore
+.env

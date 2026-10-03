@@ -1,0 +1,52 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: netsecurelab-backend:latest
+    container_name: netsecurelab-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - netsecurelab-data:/app/data
+      - ./scans:/app/scans
+      - ./reports:/app/reports
+    environment:
+      - DB_URL=sqlite:////app/data/netsecurelab.db
+      - SCANS_DIR=/app/scans
+      - REPORTS_DIR=/app/reports
+      - NMAP_PATH=nmap
+      - SCAN_TIMEOUT=600
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: netsecurelab-frontend:latest
+    container_name: netsecurelab-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  netsecurelab-data:
+    driver: local
