@@ -18,8 +18,15 @@ frontend/.vite/
 .npm
 *.log
 
+# Scans & Reports runtime data
+scans/*
+!scans/.gitkeep
+reports/*
+!reports/.gitkeep
+
 # IDE & OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
