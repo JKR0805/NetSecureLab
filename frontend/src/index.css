@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg-app: #080c14;
+  --bg-sidebar: #0d121f;
+  --bg-card: rgba(17, 24, 39, 0.7);
+  --bg-card-hover: rgba(31, 41, 55, 0.85);
+  --bg-card-elevated: #151d30;
+  --bg-input: #101726;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(56, 189, 248, 0.5);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --cyan-primary: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.3);
+  --blue-primary: #38bdf8;
+  --indigo-primary: #6366f1;
+  --purple-primary: #a855f7;
+
+  /* Severity Tokens */
+  --sev-high-bg: rgba(244, 63, 94, 0.15);
+  --sev-high-border: rgba(244, 63, 94, 0.4);
+  --sev-high-text: #fb7185;
+
+  --sev-med-bg: rgba(245, 158, 11, 0.15);
+  --sev-med-border: rgba(245, 158, 11, 0.4);
+  --sev-med-text: #fbbf24;
+
+  --sev-low-bg: rgba(59, 130, 246, 0.15);
+  --sev-low-border: rgba(59, 130, 246, 0.4);
+  --sev-low-text: #60a5fa;
+
+  --sev-info-bg: rgba(100, 116, 139, 0.15);
+  --sev-info-border: rgba(100, 116, 139, 0.4);
+  --sev-info-text: #94a3b8;
+
+  /* Status Colors */
+  --status-success: #10b981;
+  --status-running: #06b6d4;
+  --status-queued: #a855f7;
+  --status-failed: #f43f5e;
+  --status-cancelled: #64748b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 25px rgba(6, 182, 212, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Button & interactive primitives */
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--blue-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+a:hover {
+  color: var(--cyan-primary);
+}
+
+/* Pulse animation for running scans */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+}
+
+.pulsing-indicator {
+  animation: pulseGlow 2s infinite;
+}
