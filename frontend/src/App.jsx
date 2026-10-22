@@ -8,6 +8,7 @@ import { ScansPage } from './pages/ScansPage';
 import { ScanDetailPage } from './pages/ScanDetailPage';
 import { FindingsPage } from './pages/FindingsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { TopologyPage } from './pages/TopologyPage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="targets/:id" element={<TargetDetailPage />} />
           <Route path="scans" element={<ScansPage />} />
           <Route path="scans/:id" element={<ScanDetailPage />} />
+          <Route path="topology" element={<TopologyPage />} />
           <Route path="findings" element={<FindingsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

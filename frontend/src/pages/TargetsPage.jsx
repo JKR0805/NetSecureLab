@@ -42,21 +42,21 @@ export function TargetsPage() {
 
   const navigate = useNavigate();
 
-  const fetchTargets = async () => {
+  const fetchTargets = useCallback(async () => {
     try {
       setLoading(true);
       const data = await targetService.listTargets();
       setTargets(data);
-    } catch (err) {
+    } catch {
       setErrorMsg('Failed to load targets from backend');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTargets();
-  }, []);
+  }, [fetchTargets]);
 
   const handleCreateTarget = async (e) => {
     e.preventDefault();

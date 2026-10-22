@@ -1,0 +1,234 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: calc(100vh - 120px);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleArea h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+  margin-bottom: 0.25rem;
+}
+
+.titleArea p {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.875rem;
+}
+
+.controlsBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: var(--bg-surface, #1e293b);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #334155);
+}
+
+.selectInput, .searchInput {
+  background: var(--bg-card, #0f172a);
+  border: 1px solid var(--border-color, #334155);
+  color: var(--text-main, #f8fafc);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.selectInput:focus, .searchInput:focus {
+  border-color: var(--primary, #38bdf8);
+}
+
+.statsBar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.statValue {
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+}
+
+.mainArea {
+  display: flex;
+  flex: 1;
+  position: relative;
+  background: var(--bg-card, #090d16);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.canvasWrapper {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  user-select: none;
+}
+
+.canvasSvg {
+  display: block;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.canvasControls {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 0.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #334155);
+  z-index: 10;
+}
+
+.ctrlBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  padding: 0.35rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ctrlBtn:hover {
+  background: var(--bg-surface, #1e293b);
+  color: var(--text-main, #f8fafc);
+}
+
+.nodeTarget {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nodeTarget:hover {
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+}
+
+.nodeHost {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nodeHost:hover {
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.6));
+}
+
+.nodeService {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nodeService:hover {
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.6));
+}
+
+.nodeVuln {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nodeVuln:hover {
+  filter: drop-shadow(0 0 10px rgba(248, 113, 113, 0.7));
+}
+
+.sideDrawer {
+  width: 340px;
+  background: var(--bg-surface, #1e293b);
+  border-left: 1px solid var(--border-color, #334155);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color, #334155);
+  padding-bottom: 0.75rem;
+}
+
+.drawerTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.closeBtn:hover {
+  color: #fff;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.detailValue {
+  font-size: 0.875rem;
+  color: var(--text-main, #f8fafc);
+  word-break: break-all;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted, #94a3b8);
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}

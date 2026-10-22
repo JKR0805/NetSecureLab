@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Activity,
   GitCompare,
-  Calendar,
-  Layers,
 } from 'lucide-react';
 import { targetService } from '../services/targetService';
 import { scanService } from '../services/scanService';
@@ -31,15 +29,23 @@ export function TargetDetailPage() {
   const [scanProfile, setScanProfile] = useState('standard');
   const [scanSubmitting, setScanSubmitting] = useState(false);
 
+  // Schedule modal
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [scheduleInterval, setScheduleInterval] = useState('none');
+  const [scheduleProfile, setScheduleProfile] = useState('standard');
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
         const tData = await targetService.getTarget(id);
         setTarget(tData);
+        setScheduleInterval(tData.schedule_interval || 'none');
+        setScheduleProfile(tData.schedule_profile || 'standard');
         const sData = await scanService.listScans(id);
         setScans(sData);
-      } catch (err) {
+      } catch {
         setErrorMsg('Failed to load target details');
       } finally {
         setLoading(false);
@@ -59,6 +65,23 @@ export function TargetDetailPage() {
       setErrorMsg(msg);
     } finally {
       setScanSubmitting(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    try {
+      setScheduleSubmitting(true);
+      const updated = await targetService.updateSchedule(target.id, {
+        schedule_interval: scheduleInterval,
+        schedule_profile: scheduleProfile,
+      });
+      setTarget(updated);
+      setIsScheduleOpen(false);
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to update schedule';
+      setErrorMsg(msg);
+    } finally {
+      setScheduleSubmitting(false);
     }
   };
 
@@ -181,6 +204,31 @@ export function TargetDetailPage() {
           <div style={{ marginTop: '6px', color: 'var(--text-primary)', fontWeight: 700, fontSize: '18px' }}>
             {scans.length}
           </div>
+        </div>
+
+        <div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            Automated Schedule
+          </span>
+          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: target.schedule_interval ? 'var(--cyan-primary)' : 'var(--text-muted)', fontWeight: 600, textTransform: 'capitalize' }}>
+              {target.schedule_interval ? `Every ${target.schedule_interval}` : 'Manual Only'}
+            </span>
+            {target.authorization_confirmed && (
+              <button
+                onClick={() => setIsScheduleOpen(true)}
+                className={styles.secondaryBtn}
+                style={{ padding: '2px 8px', fontSize: '11px', borderRadius: '4px' }}
+              >
+                Configure
+              </button>
+            )}
+          </div>
+          {target.next_scheduled_at && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Next: {new Date(target.next_scheduled_at).toLocaleDateString()}
+            </div>
+          )}
         </div>
 
         <div>
@@ -397,6 +445,71 @@ export function TargetDetailPage() {
                 </p>
               </div>
             </label>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Schedule Configuration Modal */}
+      <Modal
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        title={`Automated Scan Schedule: ${target.name}`}
+        footer={
+          <>
+            <button
+              onClick={() => setIsScheduleOpen(false)}
+              className={styles.secondaryBtn}
+              disabled={scheduleSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveSchedule}
+              className={styles.primaryBtn}
+              disabled={scheduleSubmitting}
+            >
+              {scheduleSubmitting ? 'Saving...' : 'Save Schedule'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+            Configure recurring background assessments to monitor host drift, open port changes, and security findings.
+          </p>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              Execution Interval
+            </label>
+            <select
+              value={scheduleInterval}
+              onChange={(e) => setScheduleInterval(e.target.value)}
+              className={styles.select}
+              style={{ width: '100%', padding: '10px 12px' }}
+            >
+              <option value="none">Manual Only (No automated scans)</option>
+              <option value="daily">Daily (Every 24 hours)</option>
+              <option value="weekly">Weekly (Every 7 days)</option>
+              <option value="monthly">Monthly (Every 30 days)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              Scan Profile
+            </label>
+            <select
+              value={scheduleProfile}
+              onChange={(e) => setScheduleProfile(e.target.value)}
+              className={styles.select}
+              style={{ width: '100%', padding: '10px 12px' }}
+              disabled={scheduleInterval === 'none'}
+            >
+              <option value="quick">Quick Discovery (Ping sweep / host alive)</option>
+              <option value="standard">Standard Assessment (Top 1,000 ports + service detection)</option>
+              <option value="full">Full Depth Assessment (All 65,535 ports + NSE scripts)</option>
+            </select>
           </div>
         </div>
       </Modal>

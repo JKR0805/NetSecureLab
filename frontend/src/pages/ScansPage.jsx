@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Activity,
   Play,
   Download,
-  Filter,
   RefreshCw,
-  Search,
-  ExternalLink,
   Ban,
 } from 'lucide-react';
 import { scanService } from '../services/scanService';
@@ -30,7 +27,7 @@ export function ScansPage() {
 
   const navigate = useNavigate();
 
-  const fetchScans = async () => {
+  const fetchScans = useCallback(async () => {
     try {
       setLoading(true);
       const data = await scanService.listScans();
@@ -40,20 +37,20 @@ export function ScansPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTargets = async () => {
+  const fetchTargets = useCallback(async () => {
     try {
       const data = await targetService.listTargets();
       const authorizedTargets = data.filter((t) => t.authorization_confirmed);
       setTargets(authorizedTargets);
-      if (authorizedTargets.length > 0 && !selectedTargetId) {
-        setSelectedTargetId(authorizedTargets[0].id);
+      if (authorizedTargets.length > 0) {
+        setSelectedTargetId((prev) => prev || authorizedTargets[0].id);
       }
     } catch (err) {
       console.error('Failed to load targets:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchScans();
@@ -71,7 +68,7 @@ export function ScansPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchScans, fetchTargets]);
 
   const handleStartScan = async () => {
     if (!selectedTargetId) return;

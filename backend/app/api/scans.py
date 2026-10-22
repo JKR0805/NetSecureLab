@@ -50,6 +50,18 @@ def create_scan(payload: ScanCreate, db: Session = Depends(get_db)):
             detail=f"Invalid profile '{payload.profile}'. Allowed: {list(settings.SCAN_PROFILES.keys())}"
         )
 
+    # Concurrency guard: reject new scans if target already has an active (queued/running) scan
+    active_scans_count = db.query(Scan).filter(
+        Scan.target_id == target.id,
+        Scan.status.in_(["queued", "running"])
+    ).count()
+    if active_scans_count > 0:
+        logger.warning(f"Scan creation rejected: Target id={target.id} already has an active scan.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Target '{target.name}' already has an active scan (queued or running). Please wait for it to complete or cancel it before starting a new scan."
+        )
+
     scan_obj = Scan(
         target_id=target.id,
         profile=payload.profile,

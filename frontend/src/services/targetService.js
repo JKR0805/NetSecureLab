@@ -20,4 +20,9 @@ export const targetService = {
     const response = await api.delete(`/targets/${id}`);
     return response.data;
   },
+
+  async updateSchedule(id, payload) {
+    const response = await api.patch(`/targets/${id}/schedule`, payload);
+    return response.data;
+  },
 };

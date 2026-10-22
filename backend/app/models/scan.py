@@ -7,7 +7,7 @@ class Scan(Base):
     __tablename__ = "scans"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    target_id = Column(Integer, ForeignKey("targets.id", ondelete="CASCADE"), nullable=False)
+    target_id = Column(Integer, ForeignKey("targets.id", ondelete="RESTRICT"), nullable=False)
     profile = Column(String(50), nullable=False)  # quick, standard, full
     status = Column(String(50), nullable=False, default="created")  # created, queued, running, completed, failed, cancelled
     cancel_requested = Column(Boolean, nullable=False, default=False)

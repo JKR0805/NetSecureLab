@@ -5,13 +5,9 @@ import {
   Download,
   Eye,
   RefreshCw,
-  GitCompare,
-  Search,
-  ExternalLink,
 } from 'lucide-react';
 import { scanService } from '../services/scanService';
 import { reportService } from '../services/reportService';
-import { StatusBadge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { Loader, EmptyState } from '../components/common/Loader';
 import styles from './TargetsPage.module.css';
@@ -19,8 +15,6 @@ import styles from './TargetsPage.module.css';
 export function ReportsPage() {
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedScan, setSelectedScan] = useState(null);
-  const [compareWithId, setCompareWithId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [generating, setGenerating] = useState(false);

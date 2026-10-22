@@ -6,6 +6,7 @@ export function useScanPolling(scanId, onStatusChange = null) {
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState(null);
   const timerRef = useRef(null);
+  const wsRef = useRef(null);
 
   const fetchStatus = useCallback(async () => {
     if (!scanId) return;
@@ -28,13 +29,48 @@ export function useScanPolling(scanId, onStatusChange = null) {
 
     let active = true;
 
+    // 1. Initial status fetch
+    fetchStatus();
+
+    // 2. Real-time WebSocket connection
+    try {
+      const isHttps = window.location.protocol === 'https:';
+      const wsProtocol = isHttps ? 'wss:' : 'ws:';
+      const host = window.location.hostname || 'localhost';
+      const wsUrl = `${wsProtocol}//${host}:8000/ws/scans`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.scan_id === Number(scanId)) {
+            setStatusData(payload);
+            if (onStatusChange) onStatusChange(payload);
+            if (payload.status !== 'queued' && payload.status !== 'running') {
+              setIsPolling(false);
+            }
+          }
+        } catch {
+          // ignore non-json messages
+        }
+      };
+
+      ws.onerror = () => {
+        // Fallback gracefully to polling
+      };
+    } catch {
+      // Environments where WebSocket is not supported
+    }
+
+    // 3. Resilient backup polling interval
     const poll = async () => {
       const data = await fetchStatus();
       if (!active) return;
 
       if (data && (data.status === 'queued' || data.status === 'running')) {
         setIsPolling(true);
-        timerRef.current = setTimeout(poll, 3000);
+        timerRef.current = setTimeout(poll, 4000);
       } else {
         setIsPolling(false);
       }
@@ -47,8 +83,16 @@ export function useScanPolling(scanId, onStatusChange = null) {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch {
+          // ignore
+        }
+        wsRef.current = null;
+      }
     };
-  }, [scanId, fetchStatus]);
+  }, [scanId, fetchStatus, onStatusChange]);
 
   return { statusData, isPolling, error, refetch: fetchStatus };
 }

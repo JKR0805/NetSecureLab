@@ -105,6 +105,14 @@ def parse_nmap_xml(xml_path: Path) -> Dict[str, Any]:
                     version = service_elem.get("version")
                     extra_info = service_elem.get("extrainfo")
 
+                # NSE Script results on port
+                scripts_data = []
+                for s_elem in port_elem.findall("script"):
+                    s_id = s_elem.get("id")
+                    s_out = s_elem.get("output") or s_elem.text or ""
+                    if s_id:
+                        scripts_data.append({"id": s_id, "output": s_out.strip()})
+
                 ports_data.append({
                     "port_number": port_id,
                     "protocol": protocol,
@@ -113,7 +121,18 @@ def parse_nmap_xml(xml_path: Path) -> Dict[str, Any]:
                     "product": product,
                     "version": version,
                     "extra_info": extra_info,
+                    "scripts": scripts_data,
                 })
+
+        # Host-level NSE Scripts
+        host_scripts = []
+        hostscript_elem = host_elem.find("hostscript")
+        if hostscript_elem is not None:
+            for s_elem in hostscript_elem.findall("script"):
+                s_id = s_elem.get("id")
+                s_out = s_elem.get("output") or s_elem.text or ""
+                if s_id:
+                    host_scripts.append({"id": s_id, "output": s_out.strip()})
 
         hosts_data.append({
             "ip": ip_addr,
@@ -121,6 +140,7 @@ def parse_nmap_xml(xml_path: Path) -> Dict[str, Any]:
             "status": host_status,
             "os": os_name,
             "ports": ports_data,
+            "scripts": host_scripts,
         })
 
     return {"hosts": hosts_data}

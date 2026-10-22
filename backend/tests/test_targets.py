@@ -90,3 +90,45 @@ def test_target_deletion_restriction_with_scans(client, db_session):
     del_res = client.delete(f"/targets/{t.id}")
     assert del_res.status_code == 409
     assert "associated scan" in del_res.json()["detail"]
+
+def test_prevent_duplicate_active_scans(client, db_session, monkeypatch):
+    # Mock scan_worker.submit to avoid starting background thread in test
+    monkeypatch.setattr("app.api.scans.scan_worker.submit", lambda scan_id: None)
+
+    # Create authorized target
+    t = Target(
+        name="Target for Concurrency Test",
+        target="192.168.1.50",
+        target_type="ip",
+        authorization_confirmed=True,
+    )
+    db_session.add(t)
+    db_session.commit()
+    db_session.refresh(t)
+
+    # First scan succeeds
+    res1 = client.post("/scans", json={"target_id": t.id, "profile": "quick"})
+    assert res1.status_code == 201
+
+    # Second scan while first is still queued/running fails with 409 Conflict
+    res2 = client.post("/scans", json={"target_id": t.id, "profile": "standard"})
+    assert res2.status_code == 409
+    assert "already has an active scan" in res2.json()["detail"]
+
+    # Mark the scan as completed
+    scan_id = res1.json()["id"]
+    active_scan = db_session.query(Scan).filter(Scan.id == scan_id).first()
+    active_scan.status = "completed"
+    db_session.commit()
+
+    # Now starting a new scan succeeds
+    res3 = client.post("/scans", json={"target_id": t.id, "profile": "full"})
+    assert res3.status_code == 201
+
+def test_websocket_scans_connect_and_ping(client):
+    with client.websocket_connect("/ws/scans") as websocket:
+        websocket.send_text("ping")
+        data = websocket.receive_text()
+        assert data == "pong"
+
+

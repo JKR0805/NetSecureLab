@@ -11,5 +11,6 @@ class PortResponse(BaseModel):
     product: Optional[str] = None
     version: Optional[str] = None
     extra_info: Optional[str] = None
+    scripts: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

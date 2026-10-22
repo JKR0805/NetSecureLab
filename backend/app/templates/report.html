@@ -115,10 +115,34 @@
       color: #64748b;
       font-size: 12px;
     }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .report-container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .card, table, h2, .finding-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="report-container">
+    <div class="no-print" style="margin-bottom: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+      <button onclick="window.print()" style="background: #0284c7; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        Print / Save as PDF
+      </button>
+    </div>
     <div class="header-banner">
       <div>
         <h1>Security Assessment Report</h1>
@@ -260,13 +284,19 @@
               <strong>[{{ f.rule_id }}] {{ f.title }}</strong>
               <div style="font-size: 12px; color: #64748b;">Category: {{ f.category }} | Source: {{ f.source }}</div>
             </div>
-            <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+            <div>
+              <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+              <span class="badge" style="background: #f1f5f9; color: #334155; margin-left: 6px;">{{ f.status or 'open' }}</span>
+            </div>
           </div>
           <div class="finding-body">
             <p><strong>Description:</strong> {{ f.description }}</p>
             <p><strong>Observed Evidence:</strong></p>
             <div class="finding-evidence">{{ f.evidence }}</div>
             <p><strong>Recommended Action:</strong> {{ f.recommendation }}</p>
+            {% if f.notes %}
+              <p><strong>Remediation Notes:</strong> <em>{{ f.notes }}</em></p>
+            {% endif %}
           </div>
         </div>
       {% endfor %}

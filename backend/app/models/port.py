@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database.connection import Base
 
@@ -14,6 +14,7 @@ class Port(Base):
     product = Column(String(100), nullable=True)
     version = Column(String(100), nullable=True)
     extra_info = Column(String(255), nullable=True)
+    scripts = Column(Text, nullable=True)  # JSON-encoded array of NSE script outputs: [{id, output}]
 
     __table_args__ = (
         UniqueConstraint("asset_id", "port_number", "protocol", name="uq_port_asset_port_protocol"),

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database.connection import Base
@@ -14,10 +14,12 @@ class Finding(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     severity = Column(String(50), nullable=False)       # high, medium, low, informational
+    status = Column(String(50), nullable=False, default="open")  # open, acknowledged, accepted_risk, remediated
+    notes = Column(Text, nullable=True)
     evidence = Column(Text, nullable=False)
     source = Column(String(50), nullable=False)         # nmap, dns, recon, zap
     recommendation = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     scan = relationship("Scan", back_populates="findings")

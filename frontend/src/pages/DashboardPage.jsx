@@ -6,9 +6,7 @@ import {
   Network,
   Cpu,
   AlertTriangle,
-  ArrowRight,
   Activity,
-  CheckCircle,
 } from 'lucide-react';
 import { dashboardService } from '../services/dashboardService';
 import { StatusBadge } from '../components/common/Badge';

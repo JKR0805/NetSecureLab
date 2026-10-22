@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -5,7 +6,7 @@ from sqlalchemy import func
 from app.database.connection import get_db
 from app.models.target import Target
 from app.models.scan import Scan
-from app.schemas.target import TargetCreate, TargetResponse
+from app.schemas.target import TargetCreate, TargetResponse, TargetScheduleUpdate
 from app.utils.validators import validate_target_input
 
 router = APIRouter(prefix="/targets", tags=["targets"])
@@ -50,6 +51,43 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
     target_obj = db.query(Target).filter(Target.id == target_id).first()
     if not target_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target not found")
+    resp = TargetResponse.model_validate(target_obj)
+    resp.scan_count = len(target_obj.scans)
+    return resp
+
+@router.patch("/{target_id}/schedule", response_model=TargetResponse)
+def update_target_schedule(
+    target_id: int,
+    payload: TargetScheduleUpdate,
+    db: Session = Depends(get_db),
+):
+    target_obj = db.query(Target).filter(Target.id == target_id).first()
+    if not target_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target not found")
+
+    if not target_obj.authorization_confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot configure automated schedule for unauthorized target."
+        )
+
+    interval = payload.schedule_interval
+    if interval == "none" or not interval:
+        target_obj.schedule_interval = None
+        target_obj.next_scheduled_at = None
+    else:
+        target_obj.schedule_interval = interval
+        target_obj.schedule_profile = payload.schedule_profile or "standard"
+        now = datetime.now(timezone.utc)
+        if interval == "daily":
+            target_obj.next_scheduled_at = now + timedelta(days=1)
+        elif interval == "weekly":
+            target_obj.next_scheduled_at = now + timedelta(weeks=1)
+        elif interval == "monthly":
+            target_obj.next_scheduled_at = now + timedelta(days=30)
+
+    db.commit()
+    db.refresh(target_obj)
     resp = TargetResponse.model_validate(target_obj)
     resp.scan_count = len(target_obj.scans)
     return resp

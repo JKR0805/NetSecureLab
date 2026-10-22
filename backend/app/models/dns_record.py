@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database.connection import Base
@@ -13,7 +13,7 @@ class DNSRecord(Base):
     name = Column(String(255), nullable=False)
     value = Column(Text, nullable=False)
     ttl = Column(Integer, nullable=True)
-    collected_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    collected_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         UniqueConstraint("scan_id", "record_type", "name", "value", name="uq_dns_scan_type_name_val"),

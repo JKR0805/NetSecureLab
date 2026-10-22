@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Dict, List
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Base directory for the repository
@@ -22,7 +23,13 @@ class Settings(BaseSettings):
     # Nmap settings
     NMAP_PATH: str = "nmap"
     SCAN_TIMEOUT: int = 600  # seconds
+    MAX_SCAN_TIMEOUT: int = 1800  # hard ceiling (30 mins)
     OS_DETECTION_ENABLED: bool = True
+
+    @field_validator("SCAN_TIMEOUT")
+    @classmethod
+    def validate_scan_timeout(cls, v: int) -> int:
+        return min(max(30, v), 1800)
 
     # Scan profiles (backend-controlled, never arbitrary input from frontend)
     SCAN_PROFILES: Dict[str, List[str]] = {

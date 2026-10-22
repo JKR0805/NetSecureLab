@@ -13,10 +13,6 @@ import {
   FileText,
   Ban,
   RefreshCw,
-  ExternalLink,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
   Layers,
 } from 'lucide-react';
 import { scanService } from '../services/scanService';
@@ -471,31 +467,62 @@ export function ScanDetailPage() {
                 </thead>
                 <tbody>
                   {ports.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {p.port_number}
-                      </td>
-                      <td style={{ padding: '12px 14px', textTransform: 'uppercase' }}>{p.protocol}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <span
-                          style={{
-                            color: p.state === 'open' ? 'var(--status-success)' : 'var(--text-muted)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {p.state}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 14px', color: 'var(--cyan-primary)', fontWeight: 500 }}>
-                        {p.service || 'unknown'}
-                      </td>
-                      <td style={{ padding: '12px 14px' }}>
-                        {p.product} {p.version && <span style={{ color: 'var(--text-muted)' }}>v{p.version}</span>}
-                      </td>
-                      <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '12px' }}>
-                        {p.extra_info || '-'}
-                      </td>
-                    </tr>
+                    <React.Fragment key={p.id}>
+                      <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {p.port_number}
+                        </td>
+                        <td style={{ padding: '12px 14px', textTransform: 'uppercase' }}>{p.protocol}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span
+                            style={{
+                              color: p.state === 'open' ? 'var(--status-success)' : 'var(--text-muted)',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {p.state}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--cyan-primary)', fontWeight: 500 }}>
+                          {p.service || 'unknown'}
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          {p.product} {p.version && <span style={{ color: 'var(--text-muted)' }}>v{p.version}</span>}
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                          {p.extra_info || '-'}
+                        </td>
+                      </tr>
+                      {p.scripts && (() => {
+                        try {
+                          const parsedScripts = typeof p.scripts === 'string' ? JSON.parse(p.scripts) : p.scripts;
+                          if (!parsedScripts || parsedScripts.length === 0) return null;
+                          return (
+                            <tr style={{ background: 'rgba(8, 12, 20, 0.4)' }}>
+                              <td colSpan={6} style={{ padding: '8px 16px 14px' }}>
+                                <details style={{ cursor: 'pointer' }}>
+                                  <summary style={{ fontSize: '12px', color: 'var(--cyan-primary)', fontWeight: 600 }}>
+                                    NSE Script Outputs ({parsedScripts.length})
+                                  </summary>
+                                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {parsedScripts.map((s, idx) => (
+                                      <div key={idx} style={{ background: '#090d16', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                                        <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '12px' }}>{s.id}:</span>
+                                        <pre style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                          {s.output}
+                                        </pre>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              </td>
+                            </tr>
+                          );
+                        } catch {
+                          return null;
+                        }
+                      })()}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

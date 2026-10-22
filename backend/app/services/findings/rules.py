@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import Callable, List, Dict, Any, Optional
 
@@ -285,6 +286,72 @@ def check_r012_multiple_mx(context: Dict[str, Any]) -> List[Dict[str, Any]]:
         }]
     return []
 
+def check_r013_ssl_script(context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """R013: Insecure SSL/TLS or Weak Cipher Suites from NSE Script Output"""
+    findings = []
+    for asset in context.get("assets", []):
+        for port in asset.ports:
+            if not port.scripts:
+                continue
+            try:
+                scripts_list = json.loads(port.scripts) if isinstance(port.scripts, str) else port.scripts
+            except Exception:
+                continue
+
+            for s in scripts_list:
+                s_id = s.get("id", "")
+                output = s.get("output", "")
+                out_lower = output.lower()
+
+                if s_id in ("ssl-enum-ciphers", "ssl-cert"):
+                    weak_indicators = ["rc4", "des", "3des", "export", "null cipher", "sslv2", "sslv3", "tlsv1.0", "expired"]
+                    matched = [w for w in weak_indicators if w in out_lower]
+                    if matched:
+                        findings.append({
+                            "rule_id": "R013",
+                            "asset_id": asset.id,
+                            "category": "Cryptographic Security",
+                            "title": "Insecure SSL/TLS or Weak Cipher Suites Detected",
+                            "description": f"NSE script '{s_id}' observed weak or obsolete SSL/TLS configurations ({', '.join(matched)}).",
+                            "severity": "medium",
+                            "evidence": f"Host {asset.ip}:{port.port_number} script '{s_id}' reported:\n{output[:300]}",
+                            "source": "nmap",
+                            "recommendation": "Disable legacy protocol versions (SSLv3, TLS 1.0, TLS 1.1) and disable weak ciphers (RC4, DES, 3DES). Enforce TLS 1.2+ with modern AEAD cipher suites.",
+                        })
+                        break
+    return findings
+
+def check_r014_http_methods(context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """R014: Dangerous HTTP Methods Enabled (PUT, DELETE, TRACE) from NSE Script Output"""
+    findings = []
+    for asset in context.get("assets", []):
+        for port in asset.ports:
+            if not port.scripts:
+                continue
+            try:
+                scripts_list = json.loads(port.scripts) if isinstance(port.scripts, str) else port.scripts
+            except Exception:
+                continue
+
+            for s in scripts_list:
+                if s.get("id") == "http-methods":
+                    output = s.get("output", "")
+                    risky_methods = [m for m in ["PUT", "DELETE", "TRACE"] if m in output.upper()]
+                    if risky_methods:
+                        findings.append({
+                            "rule_id": "R014",
+                            "asset_id": asset.id,
+                            "category": "Web Security",
+                            "title": f"Potentially Dangerous HTTP Methods Enabled ({', '.join(risky_methods)})",
+                            "description": f"HTTP methods {', '.join(risky_methods)} are permitted on the web server according to NSE http-methods.",
+                            "severity": "low",
+                            "evidence": f"Host {asset.ip}:{port.port_number} http-methods:\n{output[:300]}",
+                            "source": "nmap",
+                            "recommendation": "Disable unnecessary HTTP methods (such as TRACE, PUT, DELETE) in web server configurations unless strictly required by application APIs.",
+                        })
+                        break
+    return findings
+
 RULES_CATALOG: List[Rule] = [
     Rule("R001", "FTP Service Reachable", "FTP port open", "medium", "Service Exposure", "nmap", "nmap", check_r001_ftp),
     Rule("R002", "Telnet Service Reachable", "Telnet port open", "medium", "Service Exposure", "nmap", "nmap", check_r002_telnet),
@@ -298,4 +365,6 @@ RULES_CATALOG: List[Rule] = [
     Rule("R010", "SPF Record Not Found", "Missing SPF record", "low", "DNS Security", "dns", "dns", check_r010_spf),
     Rule("R011", "DMARC Record Not Found", "Missing DMARC record", "low", "DNS Security", "dns", "dns", check_r011_dmarc),
     Rule("R012", "Multiple MX Servers", "Multiple MX records", "informational", "Mail Infrastructure", "dns", "dns", check_r012_multiple_mx),
+    Rule("R013", "Insecure SSL/TLS or Weak Cipher Suites", "Weak cipher suites in NSE output", "medium", "Cryptographic Security", "nmap", "nmap", check_r013_ssl_script),
+    Rule("R014", "Dangerous HTTP Methods Enabled", "Risky HTTP methods in NSE output", "low", "Web Security", "nmap", "nmap", check_r014_http_methods),
 ]

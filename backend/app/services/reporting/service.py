@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -52,7 +52,7 @@ def generate_scan_report(
         recon_results=recon_results,
         findings=findings,
         comparison=comparison_data,
-        generated_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     )
 
     settings.REPORTS_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from app.models.asset import Asset
@@ -63,6 +64,8 @@ def normalize_and_store_nmap_results(
                 .first()
             )
 
+            scripts_val = json.dumps(p.get("scripts", [])) if p.get("scripts") else None
+
             if not existing_port:
                 new_port = Port(
                     asset_id=asset.id,
@@ -73,6 +76,7 @@ def normalize_and_store_nmap_results(
                     product=p.get("product"),
                     version=p.get("version"),
                     extra_info=p.get("extra_info"),
+                    scripts=scripts_val,
                 )
                 db.add(new_port)
             else:
@@ -81,6 +85,8 @@ def normalize_and_store_nmap_results(
                 existing_port.product = p.get("product", existing_port.product)
                 existing_port.version = p.get("version", existing_port.version)
                 existing_port.extra_info = p.get("extra_info", existing_port.extra_info)
+                if scripts_val:
+                    existing_port.scripts = scripts_val
 
         saved_assets.append(asset)
 

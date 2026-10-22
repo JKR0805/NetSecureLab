@@ -3,6 +3,11 @@ from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict
 
 SeverityType = Literal["high", "medium", "low", "informational"]
+FindingStatusType = Literal["open", "acknowledged", "accepted_risk", "remediated"]
+
+class FindingUpdate(BaseModel):
+    status: Optional[FindingStatusType] = None
+    notes: Optional[str] = None
 
 class FindingResponse(BaseModel):
     id: int
@@ -13,6 +18,8 @@ class FindingResponse(BaseModel):
     title: str
     description: str
     severity: SeverityType
+    status: str = "open"
+    notes: Optional[str] = None
     evidence: str
     source: str
     recommendation: str

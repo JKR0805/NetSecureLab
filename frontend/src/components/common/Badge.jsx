@@ -116,3 +116,60 @@ export function StatusBadge({ status }) {
     </span>
   );
 }
+
+export function FindingStatusBadge({ status }) {
+  const stat = (status || 'open').toLowerCase();
+
+  const getStyle = () => {
+    switch (stat) {
+      case 'remediated':
+        return { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', color: '#34d399', label: 'Remediated' };
+      case 'acknowledged':
+        return { bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8', label: 'Acknowledged' };
+      case 'accepted_risk':
+        return { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)', color: '#c084fc', label: 'Accepted Risk' };
+      case 'open':
+      default:
+        return { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24', label: 'Open' };
+    }
+  };
+
+  const style = getStyle();
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 8px',
+        fontSize: '11px',
+        fontWeight: '600',
+        borderRadius: 'var(--radius-full)',
+        backgroundColor: style.bg,
+        border: `1px solid ${style.border}`,
+        color: style.color,
+      }}
+    >
+      <span
+        style={{
+          width: '5px',
+          height: '5px',
+          borderRadius: '50%',
+          backgroundColor: style.color,
+        }}
+      />
+      {style.label}
+    </span>
+  );
+}
+
+export function Badge({ type, value, status, severity }) {
+  if (type === 'severity' || severity) {
+    return <SeverityBadge severity={value || severity} />;
+  }
+  if (type === 'finding_status') {
+    return <FindingStatusBadge status={value || status} />;
+  }
+  return <StatusBadge status={value || status} />;
+}
