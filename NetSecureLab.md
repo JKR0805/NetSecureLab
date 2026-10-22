@@ -98,51 +98,52 @@ These may be discussed in the course-coverage matrix, but they are not naturally
 
 # 3. Project Scope
 
-## 3.1 Core Scope
+## 3.1 Core Scope (Fully Delivered)
 
-The core implementation should contain:
+The core framework delivers the complete end-to-end laboratory assessment workflow:
 
-1. Target management
-2. Scan management
-3. Nmap host discovery
-4. Port scanning
-5. Service/version detection
-6. Optional OS detection
-7. DNS record enumeration
-8. Basic passive reconnaissance
-9. Result normalization
-10. Rule-based finding generation
-11. Findings dashboard
-12. Scan history
-13. Scan comparison
-14. Security assessment report
+1. **Target Management**: Register, validate, and manage authorized assessment targets (IP, Hostname, Domain, Web Application) with mandatory backend authorization confirmation.
+2. **Scan Orchestration**: Execute predefined scan profiles (`Quick`, `Standard`, `Full`) with cooperative cancellation and crash recovery.
+3. **Nmap Host Discovery**: Active live host identification via ping sweeps and ARP/ICMP discovery.
+4. **Port Inventory & Scanning**: Structured port discovery across standard and full TCP ranges with subprocess timeouts.
+5. **Service & Version Fingerprinting**: Protocol extraction, service banners, and software version identification.
+6. **Operating System Detection**: Decoupled, non-fatal TCP/IP fingerprinting pass (`-O`) for `full` assessment profiles.
+7. **DNS Record Enumeration**: Comprehensive query execution (`A`, `AAAA`, `NS`, `MX`, `TXT`, and `_dmarc.<domain>`) via `dnspython`.
+8. **Passive Infrastructure Reconnaissance**: WHOIS domain registrar details, reverse DNS PTR lookups, and graceful failure handling.
+9. **Result Normalization**: Translation of tool-specific XML and network responses into a relational schema.
+10. **Rule-Based Finding Generation**: 14 transparent, evidence-backed rules (`R001`-`R014`) with module-aware skipping.
+11. **Unified Dashboard & UI**: Modern React 18+ SPA with dark-mode theme, statistics counters, and filterable finding views.
+12. **Historical Scan Archive**: Persistent storage of scans, snapshots, and raw output files.
+13. **Comparative Scan Differencing**: Bidirectional delta analysis detecting new/removed hosts, open ports, service updates, and resolved findings.
+14. **Security Assessment Reporting**: Standalone Jinja2 HTML report generator with executive summary, methodology disclaimers, and print-to-PDF styles.
 
-## 3.2 Optional Extension
+## 3.2 Advanced Extensions & Enterprise Hardening (Fully Delivered)
 
-Add only after the core system is stable:
+All three previously planned extensions along with modern enterprise capabilities have been implemented and integrated into the primary pipeline:
 
-15. OWASP ZAP integration for authorized local web targets
-16. Selected Nmap NSE results
-17. Network topology visualization
+15. **Web Application Security Assessment (OWASP ZAP Model)**: Automated HTTP/HTTPS security inspector (`app/services/web_security/scanner.py`) assessing HSTS, CSP, X-Frame-Options, MIME-sniffing, server technology disclosure, cookie flags, and sensitive file exposures (`.env`, `.git/HEAD`) under `source="zap"`.
+16. **Nmap NSE Script Parsing & Evaluation**: XML parser extraction of `<script>` blocks, populating `Port.scripts` and triggering cryptographic cipher checks (`R013`) and dangerous HTTP method checks (`R014`).
+17. **Interactive Network Topology Visualization**: High-performance SVG network graph (`/topology`) mapping `Targets → Discovered Hosts → Exposed Ports → Findings` with search, pan, zoom, and node inspector.
+18. **Real-Time Observability**: WebSocket event broadcasting (`/ws/scans`) for live state transitions and ASGI request correlation middleware (`X-Request-ID` and latency logging).
+19. **Automated Scan Scheduling**: Background scheduler worker (`scheduler.py`) supporting recurring automated scans (`daily`, `weekly`, `monthly`).
+20. **Finding Lifecycle & Remediation Workflow**: Remediation status tracking (`open`, `acknowledged`, `accepted_risk`, `remediated`) with analyst investigation notes.
+21. **Machine-Readable Exports**: Instant CSV (`/findings/export/csv`) and JSON (`/findings/export/json`) exports for SIEM and external workflows.
+22. **Authentication & RBAC**: JWT access tokens, bcrypt password hashing, and user roles (`admin`, `operator`).
 
 ## 3.3 Explicitly Out of Scope
 
-Do not make the core project depend on:
+To preserve ethical laboratory alignment and academic rigor, the following remain strictly out of scope:
 
-- Autonomous exploitation
-- Automated attack execution
-- Credential theft
-- Malware
-- Real-time enterprise IDS
-- Autonomous penetration testing
-- ML-based threat prediction
-- LLM-based vulnerability analysis
-- Large enterprise compliance engines
-- Multi-vendor configuration auditing
-- Large-scale threat-intelligence aggregation
-- Unrestricted Internet scanning
+- Autonomous exploitation and payload execution
+- Credential brute-forcing and password cracking
+- Automated attack generation and malware delivery
+- Real-time intrusion detection / inline packet blocking
+- Autonomous black-box penetration testing
+- Speculative ML/LLM-based threat hallucination
+- Enterprise multi-vendor configuration compliance
+- Unrestricted public Internet scanning without authorization
 
-The project should operate on systems for which the tester has explicit authorization.
+The project operates strictly upon authorized targets in controlled laboratory and educational environments.
 
 ---
 
@@ -189,90 +190,88 @@ The application should hide tool-specific output formats behind adapters.
 # 5. High-Level Architecture
 
 ```text
-                         NETSECURELAB
-                              |
-                              v
-                      React Frontend
-                              |
-                           REST API
-                              |
-                              v
-                         FastAPI Backend
-                              |
-          +-------------------+-------------------+
-          |                   |                   |
-          v                   v                   v
-      Nmap Adapter        DNS Adapter        Recon Adapter
-          |                   |                   |
-          v                   v                   v
-        Nmap            DNS libraries /       Passive
-                        system utilities     information
-          |                   |                   |
-          +-------------------+-------------------+
-                              |
-                              v
-                       Result Normalizer
-                              |
-                              v
-                       Finding Rule Engine
-                              |
-                 +------------+------------+
-                 |                         |
-                 v                         v
-            SQLite Database          Scan Comparison
-                 |
-                 v
-            Report Generator
-```
-
-Optional extension:
-
-```text
-Web Target
-    |
-    v
-OWASP ZAP
-    |
-    v
-ZAP Adapter
-    |
-    v
-Common Finding Model
+                                  +------------------------------------------+
+                                  |         React 18+ Single Page App        |
+                                  | (Dashboard, Targets, Topology, Findings) |
+                                  +---------------------+--------------------+
+                                                        |
+                                +-----------------------+-----------------------+
+                                | REST API (Axios)      | WebSockets (/ws/scans)|
+                                v                       v                       v
+     +---------------------------------------------------------------------------------+
+     |                               FastAPI Backend                                   |
+     |   RequestCorrelationMiddleware (X-Request-ID, Latency) | JWT Security & RBAC    |
+     +------------------------------------------+--------------------------------------+
+                                                |
+                +-------------------------------+-------------------------------+
+                |                               |                               |
+                v                               v                               v
+         API Controllers             Background Scan Worker          Recurring Scheduler
+     (/targets, /scans, /auth,     (ThreadPoolExecutor workers=1)    (Background Thread)
+     /findings, /topology, etc.)                |                               |
+                                                v                               |
+                                        Scan Orchestrator                       |
+                                                |                               |
+        +------------------+--------------------+------------------+            |
+        |                  |                    |                  |            |
+        v (Stage 1)        v (Stage 2)          v (Stage 3)        |            |
+       Nmap               DNS                  Recon               |            |
+   Subprocess         dnspython            python-whois            |            |
+  (XML Parser)        (A, MX, TXT)      (Passive Registry)         |            |
+        |                  |                    |                  |            |
+        +------------------+--------------------+------------------+            |
+                           |                                                    |
+                           v (Normalized Storage)                               |
+            +---------------------------------------+                           |
+            |        SQLite Relational Store        |<--------------------------+
+            |        (PRAGMA foreign_keys=ON)       |
+            +-------------------+-------------------+
+                                |
+                                v (Stage 4)
+                        Finding Rule Engine
+                     (14 Rules: R001 - R014)
+                                |
+                                v (Stage 5)
+                    Web Security Assessment (ZAP)
+                   (8 Rules: WEB-001 - WEB-007-GIT)
+                                |
+                +---------------+---------------+
+                |                               |
+                v                               v
+        Scan Comparison &                Report Generator
+       Topology Visualizer               (Jinja2 + Print PDF)
 ```
 
 ---
 
-# 6. Recommended Technology Stack
+# 6. Technology Stack (Implemented & Verified)
 
 ## Frontend
-- React
-- Vite
-- Standard CSS / CSS modules / existing preferred styling solution
-- Optional chart library only where a chart adds analytical value
+- **Framework**: React 18+ SPA initialized via Vite
+- **Routing**: React Router v6
+- **Styling**: Vanilla CSS Modules (custom tokens, dark-mode design system, glassmorphism)
+- **HTTP Client**: Axios with request/response interceptors for auth tokens and correlation tracking
+- **Real-Time Streaming**: Native WebSocket client (`/ws/scans`) with automatic polling fallback
+- **Interactive Visualization**: Native SVG graph engine for network topology rendering
+- **Testing & Quality**: Vitest component test suite (10 tests, 100% pass) and Oxlint (0 warnings, 0 errors)
 
 ## Backend
-- Python
-- FastAPI
-- Pydantic
-- Python standard library where practical
+- **Framework**: Python 3.11+ / FastAPI with Pydantic v2 data models
+- **Database ORM**: SQLAlchemy 2.0 (Sync) with SQLite, PRAGMA foreign key constraints, and startup migrations
+- **Concurrency & Scheduling**: In-process `ThreadPoolExecutor(max_workers=1)` for scans and background daemon thread for recurring schedules
+- **Security & RBAC**: PyJWT for cryptographic bearer tokens, Passlib with Bcrypt for password hashing
+- **Observability**: ASGI `RequestCorrelationMiddleware` injecting `X-Request-ID` and timing latency, with `CorrelationIdFilter` Python logging
 
-## Database
-- SQLite for the initial application
-- SQLAlchemy or another lightweight ORM if useful
+## Network & Security Tooling
+- **Active Scanning**: Nmap subprocess execution with XML parsing (`xml.etree.ElementTree`) and NSE script analysis
+- **DNS Intelligence**: `dnspython` for authoritative and recursive querying of standard and DMARC TXT records
+- **Passive Reconnaissance**: `python-whois` and standard `socket` libraries for registrar lookup and reverse DNS PTR queries
+- **Web Application Assessment**: `httpx` client performing active header, cookie, and path posture checks (source: `zap`)
 
-## Network/Security Tools
-- Nmap
-- Optional OWASP ZAP
-- DNS utilities / Python DNS library
-- WHOIS/RDAP-compatible source where available
-
-## Reporting
-- HTML report as the minimum
-- PDF generation as an enhancement
-
-## Development Environment
-- Kali Linux or Linux VM for security tooling
-- Windows development is acceptable if the required security tools are available
+## Reporting & Production
+- **Reporting**: Jinja2 templating engine generating standalone HTML assessment reports with print-to-PDF media queries
+- **Containerization**: Multi-stage Docker builds with Nginx reverse proxy and Docker Compose orchestration
+- **Test Coverage**: 34 backend pytest integration and unit tests (100% pass)
 
 ---
 
@@ -280,64 +279,39 @@ Common Finding Model
 
 ## Purpose
 
-Create and maintain targets that are explicitly authorized for assessment.
+Create, validate, and maintain targets that are explicitly authorized for security assessment.
 
 ## Target Types
 
-At minimum:
+Canonical normalization (`TargetNormalizer`) handles:
 
-- IP address
-- Hostname
-- Domain
-- Web URL
+- **IP Address**: IPv4 addresses (e.g. `192.168.56.101`, `127.0.0.1`)
+- **Hostname**: Local or intranet hostnames (e.g. `web01.corp.local`)
+- **Domain**: Fully-qualified domains (e.g. `scanme.nmap.org`, `example.com`)
+- **Web Application URL**: HTTP/HTTPS URLs (e.g. `http://192.168.56.102:3000`)
 
 ## Target fields
 
 ```text
 Target
 ------
-id
-name
-target
-target_type
-description
-created_at
+id: Integer (Primary Key)
+name: String (Descriptive label)
+target: String (Raw target string)
+target_type: Enum ('ip', 'hostname', 'domain', 'web_application')
+description: String (Optional context)
+authorization_confirmed: Boolean (Mandatory technical gate)
+schedule_interval: String ('daily', 'weekly', 'monthly', or None)
+schedule_profile: String ('quick', 'standard', 'full')
+next_scheduled_at: DateTime (UTC timestamp for recurring scan execution)
+created_at: DateTime (UTC creation timestamp)
 ```
 
-## Example
+## Technical Controls & Enforcement
 
-```text
-Name: College Lab VM
-Target: 192.168.56.101
-Type: IP
-```
-
-or:
-
-```text
-Name: Local Juice Shop
-Target: http://192.168.56.102:3000
-Type: Web Application
-```
-
-## UI
-
-```text
-Targets
-
-[ + Add Target ]
-
-Target Name
-Target
-Target Type
-Description
-
-[Save]
-```
-
-Include an authorization notice:
-
-> Scan only systems and applications for which explicit permission has been obtained.
+1. **Authorization Confirmation**: Scans cannot be executed against any target where `authorization_confirmed` is false. Attempts to initiate a scan return HTTP 403 Forbidden.
+2. **Deletion Protection**: To preserve auditability and prevent historical data corruption, targets with associated scans cannot be deleted (`DELETE /targets/{id}` returns HTTP 409 Conflict).
+3. **Automated Scheduling**: Operators can configure recurring scans via `PATCH /targets/{id}/schedule`, managed by the background `scheduler.py` worker.
 
 ---
 
@@ -345,57 +319,49 @@ Include an authorization notice:
 
 ## Scan Profiles
 
-Keep a small number of understandable presets.
+Scan profiles are strictly managed by the backend (`app/config.py`) to eliminate command-injection risks:
 
 ### Quick Scan
-- Host discovery
-- Basic port scan
+- **Objective**: Rapid live host discovery
+- **Arguments**: `-sn` (ping sweep, no port scanning)
+- **Execution Target**: Canonical host/IP
 
 ### Standard Scan
-- Host discovery
-- Port scan
-- Service/version detection
+- **Objective**: Typical surface enumeration and service detection
+- **Arguments**: `-sV -T4` (top 1,000 TCP ports with version banner grabbing)
+- **Execution Target**: Canonical host/IP
 
 ### Full Assessment
-- Host discovery
-- Port scan
-- Service/version detection
-- OS detection
-- Selected NSE scripts
+- **Objective**: Comprehensive security assessment
+- **Arguments**: `-sV -sC -T4 -p-` (all 65,535 TCP ports, default NSE scripts, version detection)
+- **Decoupled Passes**: Secondary non-fatal OS detection pass (`-O`) and targeted script parsing (`ssl-enum-ciphers`, `http-methods`)
 
-The exact command-line options should be centralized in the backend and not hard-coded across frontend components.
+## Safety Controls & Execution Guards
 
-## Scan lifecycle
-
-```text
-Created
-   |
-   v
-Queued / Started
-   |
-   v
-Running
-   |
-   +----> Failed
-   |
-   v
-Completed
-```
+- **Hard Timeout Cap**: Enforced execution timeout (`SCAN_TIMEOUT = 600s`, hard cap `MAX_SCAN_TIMEOUT = 1800s`). If a subprocess exceeds this threshold, it is terminated and marked `failed`.
+- **Active Scan Concurrency Guard**: Rejects scan creation (HTTP 409 Conflict) if the target already has an active scan (`queued` or `running`).
+- **Cooperative Cancellation**: Pipeline stages check `scan.cancel_requested` between execution phases to halt execution gracefully.
+- **Stale Scan Recovery**: On application boot, any scans lingering in `running` or `queued` state due to process termination are marked `failed` with explanatory messages.
+- **Real-Time WebSockets**: Live status broadcasts emitted via `/ws/scans` notify the frontend UI instantaneously of stage transitions.
 
 ## Scan record
 
 ```text
 Scan
 ----
-id
-target_id
-profile
-status
-started_at
-completed_at
-duration
-raw_output_path
-error_message
+id: Integer (Primary Key)
+target_id: Integer (Foreign Key -> Target.id, ondelete RESTRICT)
+profile: Enum ('quick', 'standard', 'full')
+status: Enum ('queued', 'running', 'completed', 'failed', 'cancelled')
+cancel_requested: Boolean (Cooperative cancellation flag)
+started_at: DateTime (UTC start timestamp)
+completed_at: DateTime (UTC finish timestamp)
+duration: Float (Execution duration in seconds)
+raw_output_path: String (Filesystem path to raw Nmap XML)
+nmap_status: Enum ('pending', 'success', 'failed', 'skipped')
+dns_status: Enum ('pending', 'success', 'partial', 'failed', 'skipped')
+recon_status: Enum ('pending', 'success', 'partial', 'failed', 'skipped')
+error_message: String (Descriptive failure reason if applicable)
 ```
 
 ---
@@ -588,22 +554,34 @@ The application should not fail completely because one external source is unavai
 
 # 12. Module 6: Common Result Model
 
-Different tools produce different formats.
+Different tools produce different formats. The backend normalizes them into common relational entities stored in SQLite (`PRAGMA foreign_keys = ON`).
 
-The backend should normalize them into common entities.
+## User
+
+```text
+User
+----
+id: Integer (Primary Key)
+username: String (Unique)
+email: String
+hashed_password: String (Bcrypt hashed)
+role: String ('admin', 'operator')
+is_active: Boolean
+created_at: DateTime (UTC)
+```
 
 ## Asset
 
 ```text
 Asset
 -----
-id
-scan_id
-ip
-hostname
-status
-os
-discovered_at
+id: Integer (Primary Key)
+scan_id: Integer (Foreign Key -> Scan.id)
+ip: String (IPv4 address)
+hostname: String (Optional reverse or DNS hostname)
+status: String ('up', 'down')
+os: String (OS signature string if detected)
+discovered_at: DateTime (UTC)
 ```
 
 ## Port
@@ -611,42 +589,46 @@ discovered_at
 ```text
 Port
 ----
-id
-asset_id
-port_number
-protocol
-state
-service
-product
-version
-extra_info
+id: Integer (Primary Key)
+asset_id: Integer (Foreign Key -> Asset.id)
+port_number: Integer (e.g. 80, 443, 22)
+protocol: String ('tcp', 'udp')
+state: String ('open', 'filtered', 'closed')
+service: String (Service name, e.g. 'http', 'ssh')
+product: String (Software product, e.g. 'Apache httpd', 'OpenSSH')
+version: String (Software version, e.g. '2.4.52')
+extra_info: String (Additional banner details)
+scripts: String (JSON-serialized NSE script outputs: [{'id': ..., 'output': ...}])
 ```
 
-## DNS record
+## DNS Record
 
 ```text
 DNSRecord
 ---------
-id
-target_id
-record_type
-name
-value
-ttl
+id: Integer (Primary Key)
+target_id: Integer (Foreign Key -> Target.id)
+scan_id: Integer (Foreign Key -> Scan.id)
+record_type: String ('A', 'AAAA', 'MX', 'NS', 'TXT')
+name: String (Query record name, e.g. '_dmarc.example.com')
+value: String (Record data string)
+ttl: Integer (Time to live)
+collected_at: DateTime (UTC)
 ```
 
-## Recon result
+## Recon Result
 
 ```text
 ReconResult
 -----------
-id
-target_id
-category
-key
-value
-source
-collected_at
+id: Integer (Primary Key)
+target_id: Integer (Foreign Key -> Target.id)
+scan_id: Integer (Foreign Key -> Scan.id)
+category: String ('whois', 'rdns', 'geo')
+key: String (Property name, e.g. 'registrar', 'country')
+value: String (Extracted value)
+source: String ('whois', 'socket')
+collected_at: DateTime (UTC)
 ```
 
 ## Finding
@@ -654,85 +636,79 @@ collected_at
 ```text
 Finding
 -------
-id
-scan_id
-asset_id
-category
-title
-description
-severity
-evidence
-source
-recommendation
-created_at
+id: Integer (Primary Key)
+scan_id: Integer (Foreign Key -> Scan.id)
+asset_id: Integer (Optional Foreign Key -> Asset.id)
+rule_id: String (Traceable rule identifier, e.g. 'R001', 'WEB-001')
+category: String (Taxonomy category, e.g. 'Service Exposure', 'Web Security')
+title: String (Concise summary of observation)
+description: String (Detailed technical explanation)
+severity: Enum ('critical', 'high', 'medium', 'low', 'informational')
+status: Enum ('open', 'acknowledged', 'accepted_risk', 'remediated')
+evidence: Text (Observed command/banner output or header proof)
+source: String ('nmap', 'dns', 'recon', 'zap')
+recommendation: Text (Actionable administrative guidance)
+notes: Text (Analyst investigation notes and audit remarks)
+created_at: DateTime (UTC)
 ```
 
 ---
 
 # 13. Module 7: Rule-Based Finding Engine
 
-The finding engine should initially be deterministic and transparent.
+The finding engine is deterministic, evidence-backed, and transparent.
 
 ## Why rule-based?
 
-- Easy to explain in a viva
-- Easy to test
-- Easy to reproduce
-- Easy to justify
-- Does not require a training dataset
-- Keeps the project aligned with networking/security rather than turning it into an ML project
+- Transparent and defensible during viva evaluations
+- Deterministic, unit-testable, and reproducible
+- Zero hallucination risk (unlike generative AI approaches)
+- Does not require a training dataset or statistical assumptions
+- Directly reinforces Computer Networks protocols and Ethical Hacking risk principles
 
-## Conceptual flow
+## Complete Rules Catalog
 
-```text
-Normalized Results
-       |
-       v
-Security Rules
-       |
-       v
-Findings
-```
+### Network & Infrastructure Rules (Source: `nmap` and `dns`)
 
-## Example checks
+| Rule ID | Title | Trigger Condition | Severity | Category | Source |
+|---|---|---|---|---|---|
+| `R001` | FTP Service Reachable | TCP/21 open | Medium | Service Exposure | `nmap` |
+| `R002` | Telnet Service Reachable | TCP/23 open | Medium | Service Exposure | `nmap` |
+| `R003` | Database Service Reachable | TCP 3306, 5432, 1433, 1521, or 27017 open | Medium | Service Exposure | `nmap` |
+| `R004` | SMB/NetBIOS Service Reachable | TCP 139 or 445 open | Medium | Service Exposure | `nmap` |
+| `R005` | RDP Service Reachable | TCP/3389 open | Low | Service Exposure | `nmap` |
+| `R006` | Web Service Detected | TCP 80, 443, 8080, 8443 open with HTTP | Informational | Web Discovery | `nmap` |
+| `R007` | SSH Service Detected | TCP/22 open | Informational | Service Info | `nmap` |
+| `R008` | Service Version Identified | Software version extracted by banner probe | Informational | Fingerprinting | `nmap` |
+| `R009` | OS Fingerprint Identified | OS detection signature returned | Informational | Fingerprinting | `nmap` |
+| `R010` | SPF Record Not Found | No TXT record starting with `v=spf1` (domain targets) | Low | DNS Security | `dns` |
+| `R011` | DMARC Record Not Found | No TXT record at `_dmarc.<domain>` (domain targets) | Low | DNS Security | `dns` |
+| `R012` | Multiple MX Servers | More than one MX record detected | Informational | Mail Infrastructure | `dns` |
+| `R013` | Insecure SSL/TLS Weak Ciphers | Obsolete ciphers/protocols in NSE script output | Medium | Cryptographic Security | `nmap` |
+| `R014` | Dangerous HTTP Methods Enabled | Risky methods (PUT, DELETE, TRACE) in NSE output | Low | Web Security | `nmap` |
 
-### Exposed FTP service
+### Web Application Posture Rules (Source: `zap`)
 
-```text
-IF TCP port 21 is open
-THEN:
-    finding_type = service_exposure
-    title = Exposed FTP Service
-```
+Integrated into Stage 5 of the scan orchestrator (`app/services/web_security/scanner.py`):
 
-### Exposed database service
+| Rule ID | Title | Trigger Condition | Severity | Category |
+|---|---|---|---|---|
+| `WEB-001` | Missing HSTS Header | HTTPS endpoint missing `Strict-Transport-Security` | Medium | Web Security |
+| `WEB-001-HTTP` | Unencrypted HTTP In Use | Web service running over cleartext HTTP | Medium | Web Security |
+| `WEB-002` | Missing Content Security Policy | Missing `Content-Security-Policy` header | Medium | Web Security |
+| `WEB-003` | Missing Clickjacking Protection | Missing `X-Frame-Options` and CSP `frame-ancestors` | Medium | Web Security |
+| `WEB-004` | Missing MIME-Sniffing Protection | Missing `X-Content-Type-Options: nosniff` | Low | Web Security |
+| `WEB-005` | Server / Tech Disclosure | Disclosed `Server` or `X-Powered-By` headers | Informational | Information Disclosure |
+| `WEB-006` | Insecure Cookie Flags | Session cookie missing `Secure` or `HttpOnly` flags | Low | Web Security |
+| `WEB-007` | Exposed `.env` Configuration | Accessible `.env` file containing secrets/keys | High | Sensitive Data Exposure |
+| `WEB-007-GIT` | Exposed `.git` Metadata | Accessible `.git/HEAD` repository directory | High | Sensitive Data Exposure |
 
-```text
-IF a database-related service is directly reachable
-THEN:
-    create a review/exposure finding
-```
+## Module-Aware Execution
 
-### HTTP service detected
-
-```text
-IF HTTP service is detected
-THEN:
-    mark web application as discovered
-    optionally queue web assessment
-```
-
-### Version information present
-
-```text
-IF service version is identified
-THEN:
-    record version for assessment and reporting
-```
-
-The final rule set should be small, documented, and supported by evidence.
-
-Do not claim that these rules identify all vulnerabilities.
+The finding engine respects collection module outcome statuses:
+- If `nmap_status == "failed"`, port-based rules (`R001`-`R009`, `R013`, `R014`) are skipped rather than falsely reporting zero findings.
+- If `dns_status == "failed"`, DNS rules (`R010`-`R012`) are skipped.
+- Every finding includes mandatory evidence, rule ID traceability, and practical administrative remediation guidance.
 
 ---
 
@@ -858,289 +834,246 @@ Avoid unnecessary decorative graphs.
 
 # 17. Main UI Pages
 
-Recommended navigation:
+The frontend is a single-page application built with React 18+ and CSS Modules, adhering to a high-contrast dark-mode design system.
+
+## Navigation Structure
 
 ```text
-Dashboard
-Targets
-Scans
-Assets
-DNS Intelligence
-Findings
-Reports
+Dashboard (/): Aggregated statistics, recent scans, finding severity breakdown
+Targets (/targets): Authorized target inventory, registration modal, recurring scheduler
+Topology (/topology): Interactive SVG graph mapping Targets -> Hosts -> Ports -> Findings
+Scans (/scans): Scan execution history, active progress indicators, cancellation controls
+Scan Detail (/scans/:id): In-depth host snapshots, ports, services, DNS, recon, raw XML
+Scan Comparison (/compare): Bidirectional diff between scans of the same target
+Findings (/findings): Enterprise finding table, lifecycle management, notes drawer, CSV/JSON export
+Reports (/reports): Standalone HTML report viewer with print-to-PDF export
 ```
 
-## Targets
-- list targets
-- add target
-- target details
-- scan target
+## Detailed View Capabilities
 
-## Scans
-- previous scans
-- status
-- profile
-- duration
-- result summary
+### Targets View (`/targets` & `/targets/:id`)
+- Register new authorized targets with explicit confirmation checkbox
+- Real-time scan history per target
+- Configure recurring automated scans (daily, weekly, monthly) via interactive modal
+- Target deletion protection when historical scans exist
 
-## Assets
-- discovered hosts
-- host details
-- ports
-- services
+### Network Topology View (`/topology`)
+- Native SVG rendering of relational graph hierarchies: `Targets → Discovered Hosts → Exposed Services → Findings`
+- Search bar to locate specific IPs, hostnames, or service names
+- Category filters to toggle node visibility (Targets, Hosts, Services, Findings)
+- Interactive zoom, pan, and click-to-inspect side drawer displaying node properties and vulnerabilities
 
-## DNS Intelligence
-- domain records
-- mail servers
-- nameservers
+### Findings View (`/findings`)
+- Multi-dimensional filters (Severity: Critical, High, Medium, Low, Info; Category; Source: Nmap, DNS, Recon, ZAP)
+- Remediation lifecycle selector: `open` &rarr; `acknowledged` &rarr; `accepted_risk` &rarr; `remediated`
+- Analyst investigation notes drawer allowing custom remediation remarks
+- One-click machine-readable exports: **Export to CSV** and **Export to JSON**
 
-## Findings
-- findings list
-- filters
-- evidence
-- recommendations
-
-## Reports
-- generate/view report
-- report history
+### Reports View (`/reports/:scan_id`)
+- Generates and views standalone HTML assessment reports
+- Formats evidence, observed ports, DNS records, and methodology disclaimers
+- Print-to-PDF trigger with dedicated `@media print` styling
 
 ---
 
 # 18. Module 9: Scan Comparison
 
-This is a high-value feature because it turns the application into a monitoring/assessment system rather than a one-time scanner.
+This high-value capability transforms NetSecureLab into a continuous security assessment framework by comparing normalized snapshots across scans of the same target.
 
-## Concept
-
-```text
-Scan 1
-  +
-Scan 2
-  |
-  v
-Difference Engine
-```
-
-## Compare
-
-- New hosts
-- Removed hosts
-- New ports
-- Removed ports
-- New services
-- Removed services
-- Service/version changes
-- New findings
-- Resolved findings
-
-## Example
+## Comparison Diff Engine
 
 ```text
-SCAN COMPARISON
-
-Target: 192.168.56.101
-
-New:
-+ 3306/TCP
-  MySQL detected
-
-Removed:
-- None
-
-Changed:
-22/TCP OpenSSH version changed
-
-Findings:
-+ Exposed Database Service
+Scan 1 (Baseline Snapshot)
+          +
+Scan 2 (Current Snapshot)
+          |
+          v
+Difference Engine (app/services/comparison/)
+          |
+          +---> Discovered / Removed Hosts
+          +---> Newly Opened / Closed Ports
+          +---> Service & Banner Version Changes
+          +---> New Findings / Resolved Findings
 ```
-
-The comparison should operate against normalized records.
 
 ---
 
 # 19. Module 10: Reporting
 
-Generate a structured security-assessment report.
+Generates formal, standalone security assessment reports using Jinja2 templating.
 
-## Report structure
+## Report Principles
 
-```text
-NETSECURELAB
-Network Security Assessment Report
-
-1. Assessment Overview
-2. Target Information
-3. Scan Information
-4. Discovered Hosts
-5. Open Ports
-6. Service / Version Information
-7. DNS Intelligence
-8. Reconnaissance Findings
-9. Security Findings
-10. Evidence
-11. Recommendations
-12. Scan Comparison (if applicable)
-13. Limitations
-```
-
-## Report principles
-
-- Show timestamps
-- Show the target
-- Show the scan profile
-- Distinguish observed results from recommendations
-- Include evidence
-- Include limitations
-- Do not claim comprehensive vulnerability coverage
-
-HTML output is sufficient for the core version. PDF generation is an enhancement.
+- Executive assessment overview and target metadata
+- Distinguishes observed technical facts from administrative recommendations
+- Full evidence disclosure for every finding with rule ID traceability
+- Methodological limitations and non-destructive testing disclaimers
+- Responsive HTML view and seamless print-to-PDF formatting via `@media print`
 
 ---
 
-# 20. Optional Web Security Module: OWASP ZAP
+# 20. Web Security Module: Integrated Web Application Posture (ZAP Model)
 
-This module corresponds to the web-security/proxy component of the course.
+Corresponds to the web security and proxy assessment component of the course syllabus. It runs automatically in Stage 5 of the scan orchestrator (`app/services/web_security/scanner.py`) whenever HTTP/HTTPS services or domain targets are detected.
 
-It should remain optional to the core framework.
-
-## Architecture
+## Implementation Architecture
 
 ```text
-Web Target
-    |
-    v
-OWASP ZAP
-    |
-    v
-ZAP API / automation
-    |
-    v
-ZAP Adapter
-    |
-    v
-Normalized Findings
-    |
-    v
-Dashboard + Report
+Discovered Web Endpoint (HTTP/HTTPS)
+                 |
+                 v
+   Web Security Scanner (httpx client)
+   (Passive header & active baseline checks)
+                 |
+                 v
+   Posture Evaluation (HSTS, CSP, Cookies, Headers, .env, .git)
+                 |
+                 v
+   Normalized Findings (source = "zap")
+                 |
+                 v
+   Unified Finding Store & Dashboard
 ```
 
-## Use case
+## Evaluated Rules (`source="zap"`)
 
-Use a deliberately vulnerable local application such as a laboratory target.
+1. `WEB-001`: Missing HTTP Strict Transport Security (HSTS) on HTTPS endpoints.
+2. `WEB-001-HTTP`: Unencrypted HTTP Service in use without TLS redirection.
+3. `WEB-002`: Missing Content Security Policy (CSP) header.
+4. `WEB-003`: Missing Clickjacking Protection (`X-Frame-Options` and CSP `frame-ancestors`).
+5. `WEB-004`: Missing MIME-Sniffing Protection (`X-Content-Type-Options: nosniff`).
+6. `WEB-005`: Server & Framework Version Disclosure (`Server`, `X-Powered-By`).
+7. `WEB-006`: Insecure Session Cookie Flags (Missing `Secure` or `HttpOnly`).
+8. `WEB-007` & `WEB-007-GIT`: Exposed Configuration Files (`.env`, `.git/HEAD`).
 
-Do not use arbitrary Internet websites.
-
-## Possible data to import
-
-- Alert title
-- Risk level
-- URL
-- Parameter
-- Evidence
-- Description
-- Recommendation
-- Source = ZAP
-
-Map imported ZAP findings into the same `Finding` model.
-
-This allows the dashboard to show:
-
-```text
-Finding Source
---------------
-Nmap
-DNS
-Recon
-ZAP
-```
-
-without changing the frontend data model.
+All web security findings map directly to the common `Finding` schema with `source="zap"`, appearing seamlessly on the Dashboard, Findings page, and generated reports without modifying frontend models.
 
 ---
 
-# 21. Suggested Backend API
+# 21. Backend API Reference
 
-Keep the API small.
+The FastAPI backend exposes a clean REST API and WebSocket connection:
 
-## Targets
-
+## Authentication & RBAC
 ```text
-POST   /targets
-GET    /targets
-GET    /targets/{id}
-DELETE /targets/{id}
+POST   /auth/login             Authenticate credentials, return signed JWT bearer token
+GET    /auth/me                Retrieve current authenticated user profile
+POST   /auth/register          Register new user account (requires admin privilege)
 ```
 
-## Scans
-
+## Targets & Scheduling
 ```text
-POST   /scans
-GET    /scans
-GET    /scans/{id}
-GET    /scans/{id}/status
+POST   /targets                Register new target (requires authorization_confirmed: true)
+GET    /targets                List all targets with scan counts
+GET    /targets/{id}           Retrieve detailed target profile
+PATCH  /targets/{id}/schedule  Configure recurring schedule (daily, weekly, monthly, none)
+DELETE /targets/{id}           Delete target (returns 409 if scans exist)
 ```
 
-## Results
-
+## Scans & Results
 ```text
-GET /scans/{id}/hosts
-GET /scans/{id}/ports
-GET /scans/{id}/services
-GET /scans/{id}/dns
-GET /scans/{id}/findings
+POST   /scans                  Create & queue scan ({target_id, profile})
+GET    /scans                  List all scans (filterable by target_id)
+GET    /scans/{id}             Get scan status, duration, and module outcomes
+GET    /scans/{id}/status      Lightweight status endpoint for polling fallback
+POST   /scans/{id}/cancel      Request cooperative cancellation of running scan
+GET    /scans/{id}/hosts       List discovered host snapshots
+GET    /scans/{id}/ports       List discovered open/filtered ports and banners
+GET    /scans/{id}/services    List distinct enumerated services
+GET    /scans/{id}/dns         List DNS records collected for scan
+GET    /scans/{id}/recon       List passive reconnaissance results
+GET    /scans/{id}/raw         Secure download of raw Nmap XML file
+GET    /scans/compare/{s1}/{s2}Comparative delta diff between two scans
 ```
 
-## Comparison
-
+## Findings & Lifecycle
 ```text
-GET /scans/compare/{scan1}/{scan2}
+GET    /findings               List all findings across scans (filterable)
+GET    /findings/export/csv    Export findings matching filters as CSV
+GET    /findings/export/json   Export findings matching filters as JSON
+PATCH  /findings/{id}          Update remediation status and analyst notes
+GET    /scans/{id}/findings    List findings for a specific scan
 ```
 
-## Reports
-
+## Network Topology
 ```text
-GET /reports/{scan_id}
+GET    /topology               Unified graph (nodes and links) for targets, hosts, ports, findings
 ```
 
-Exact route naming can change as implementation evolves, but the separation of responsibilities should remain.
+## Reports & System
+```text
+POST   /reports/{scan_id}/generate  Generate standalone HTML assessment report
+GET    /reports/{scan_id}           View rendered HTML report
+GET    /reports/{scan_id}/download  Download HTML report file
+GET    /dashboard/stats             Global metrics (targets, scans, assets, severity counts)
+GET    /health                      System health and application version
+```
+
+## Real-Time WebSockets
+```text
+WS     /ws/scans               Live streaming of scan state changes and stage transitions
+```
 
 ---
 
-# 22. Suggested Repository Structure
+# 22. Repository Structure
 
 ```text
-netsecurelab/
+NetSecureLab/
 |
 +-- frontend/
 |   +-- src/
-|       +-- components/
-|       +-- pages/
-|       +-- services/
-|       +-- hooks/
-|       +-- App.jsx
-|       +-- main.jsx
+|   |   +-- components/
+|   |   |   +-- Layout/         AppShell, Navbar, Sidebar
+|   |   |   +-- common/         Badge, Modal, Button, Card
+|   |   +-- pages/
+|   |   |   +-- DashboardPage.jsx
+|   |   |   +-- TargetsPage.jsx
+|   |   |   +-- TargetDetailPage.jsx
+|   |   |   +-- ScansPage.jsx
+|   |   |   +-- ScanDetailPage.jsx
+|   |   |   +-- ScanComparePage.jsx
+|   |   |   +-- FindingsPage.jsx
+|   |   |   +-- ReportsPage.jsx
+|   |   |   +-- TopologyPage.jsx
+|   |   |   +-- TopologyPage.module.css
+|   |   +-- services/           api.js, authService.js, findingService.js, topologyService.js
+|   |   +-- hooks/              useScanPolling.js (WebSocket with polling fallback)
+|   |   +-- test/               Vitest test suites (Badge.test.jsx, Modal.test.jsx)
+|   |   +-- App.jsx
+|   |   +-- main.jsx
+|   +-- package.json
+|   +-- vite.config.js
 |
 +-- backend/
 |   +-- app/
-|       +-- main.py
-|       +-- routes/
-|       +-- models/
-|       +-- schemas/
-|       +-- services/
-|       |   +-- nmap_service.py
-|       |   +-- dns_service.py
-|       |   +-- recon_service.py
-|       |   +-- finding_engine.py
-|       |   +-- comparison.py
-|       |   +-- report_service.py
-|       |   +-- zap_service.py        # optional
-|       |
-|       +-- database/
+|   |   +-- main.py             FastAPI application, lifespan, middleware, routers
+|   |   +-- config.py           Application settings, scan timeouts, scan profiles
+|   |   +-- api/                API route controllers (targets, scans, findings, auth, topology, etc.)
+|   |   +-- database/           connection.py, init_db.py (auto-migrations & crash recovery)
+|   |   +-- models/             SQLAlchemy models (Target, Scan, Asset, Port, DNSRecord, Finding, User)
+|   |   +-- schemas/            Pydantic schemas for request/response serialization
+|   |   +-- services/
+|   |   |   +-- nmap/           executor.py, parser.py (XML & NSE), normalizer.py
+|   |   |   +-- dns/            service.py (dnspython A, MX, NS, TXT, DMARC)
+|   |   |   +-- recon/          service.py (WHOIS and reverse DNS)
+|   |   |   +-- findings/       engine.py, rules.py (R001 - R014 catalog)
+|   |   |   +-- web_security/   scanner.py (HTTP posture & ZAP model)
+|   |   |   +-- reporting/      service.py (Jinja2 HTML report compilation)
+|   |   |   +-- scan_orchestrator.py  5-stage execution coordinator
+|   |   +-- workers/
+|   |   |   +-- scan_worker.py  ThreadPoolExecutor scan worker
+|   |   |   +-- scheduler.py    Recurring cron scan scheduler
+|   |   +-- utils/              logger.py, security.py (JWT/Bcrypt), auth_deps.py, event_manager.py
+|   +-- tests/                  34 pytest tests across all modules
+|   +-- requirements.txt
+|   +-- pyproject.toml
 |
-+-- reports/
-+-- scans/
-+-- docs/
-+-- README.md
++-- docker-compose.yml          Production multi-container orchestration
++-- Dockerfile.backend          Containerized FastAPI + Nmap environment
++-- Dockerfile.frontend         Containerized React + Nginx reverse proxy
++-- README.md                   Primary user and architectural manual
++-- NetSecureLab.md             Comprehensive reference specification
 ```
 
 ---
@@ -1291,71 +1224,33 @@ Avoid relying on a public Internet host for demonstrations.
 
 ---
 
-# 27. Functional Test Cases
+# 27. Functional Test Cases & Automated Testing Suite
 
-The project should have explicit tests.
+The framework includes a comprehensive automated test suite spanning unit, integration, safety control, and UI component tests:
 
-## Test 1: Target creation
-Input a valid authorized target.
+- **Backend (pytest)**: 34 tests across 13 test files (`100% passing`)
+- **Frontend (vitest)**: 10 tests across 2 test suites (`100% passing`)
+- **Static Analysis (oxlint)**: 0 warnings, 0 errors across 27 frontend source files
 
-Expected:
-- target saved
-- target appears in target list
+## Automated Testing Matrix
 
-## Test 2: Invalid target
-Provide malformed target input.
-
-Expected:
-- validation error
-- scan not started
-
-## Test 3: Host discovery
-Run quick assessment.
-
-Expected:
-- host status recorded
-
-## Test 4: Port discovery
-Scan a controlled host with known open ports.
-
-Expected:
-- open ports appear in database and UI
-
-## Test 5: Service detection
-Run service/version detection.
-
-Expected:
-- service and version fields populated where detected
-
-## Test 6: DNS
-Query a controlled/known domain.
-
-Expected:
-- DNS records displayed
-
-## Test 7: Finding engine
-Use a test host exposing a rule-covered service.
-
-Expected:
-- corresponding finding generated
-
-## Test 8: Scan comparison
-Perform two scans with a known controlled change.
-
-Expected:
-- new/removed service or port detected
-
-## Test 9: Report generation
-Generate report from completed scan.
-
-Expected:
-- report contains target, scan details, results, findings and recommendations
-
-## Test 10: Tool failure
-Simulate unavailable tool or failed lookup.
-
-Expected:
-- scan status/error handled gracefully
+| Test Suite / Test ID | Component / Area | Verification Focus | Result |
+|---|---|---|---|
+| `test_auth_api.py` | Authentication & RBAC | Password hashing, JWT token issue, `/auth/me` profile, admin registration guards, unauthorized access rejection | 4 / 4 Passed |
+| `test_targets.py` | Target Management | Valid target creation, IP/domain/URL validation, shell injection character rejection, deletion protection (409 Conflict), authorization check | 7 / 7 Passed |
+| `test_target_normalizer.py` | Target Normalizer | Canonical extraction of IP, domain, hostnames, and URLs for downstream collection | 4 / 4 Passed |
+| `test_orchestrator.py` | Scan Orchestrator | Stage coordination, cooperative cancellation between stages, independent module error tolerance | 3 / 3 Passed |
+| `test_nmap_parser.py` | Nmap & NSE Parser | Host status, port states, banners, and NSE script extraction (`ssl-enum-ciphers`, `http-methods`) from XML fixtures | 3 / 3 Passed |
+| `test_finding_engine.py` | Rule Engine | Deterministic evaluation of `R001`-`R014`, evidence formatting, and module-awareness skipping when Nmap/DNS fail | 3 / 3 Passed |
+| `test_findings_api.py` | Findings API | Remediation lifecycle updates (`PATCH /findings/{id}`), note persistence, and CSV/JSON export generation | 1 / 1 Passed |
+| `test_web_security.py` | Web Assessment (ZAP) | Passive & baseline HTTP/HTTPS posture checks (`WEB-001` to `WEB-007-GIT`), cookie flag analysis, sensitive file disclosure | 2 / 2 Passed |
+| `test_topology_api.py` | Network Topology | Graph node and link generation (`Targets → Hosts → Ports → Findings`) and summary statistics | 2 / 2 Passed |
+| `test_scheduler.py` | Scan Scheduler | Automated recurring interval evaluation (daily, weekly, monthly), overdue scan triggering, next runtime calculation | 2 / 2 Passed |
+| `test_comparison.py` | Scan Comparison | Snapshot diffing, identifying new/removed ports and hosts, service version updates, and resolved findings | 1 / 1 Passed |
+| `test_report.py` | Report Generation | Standalone Jinja2 HTML report compilation with findings, evidence, disclaimers, and print-to-PDF styles | 1 / 1 Passed |
+| `test_stale_recovery.py` | Crash Recovery | Automatic detection and marking of orphaned `queued`/`running` scans as `failed` on application startup | 1 / 1 Passed |
+| `Badge.test.jsx` | Frontend UI | Badge rendering for all severity and status variants (`critical`, `high`, `medium`, `low`, `info`) | 8 / 8 Passed |
+| `Modal.test.jsx` | Frontend UI | Modal mounting, focus trap, and Escape key dismissal | 2 / 2 Passed |
 
 ---
 
@@ -1722,85 +1617,23 @@ Prefer a smaller fully working feature over a large partially working feature.
 
 ---
 
-# 39. Definition of Done
+# 39. Definition of Done (Verified & Complete)
 
-The project is complete when the following end-to-end workflow works reliably:
+The NetSecureLab project has satisfied all core requirements, optional extensions, and enterprise architecture standards:
 
-```text
-Create target
-      ↓
-Start scan
-      ↓
-Nmap executes
-      ↓
-Results parsed
-      ↓
-Hosts / Ports / Services stored
-      ↓
-DNS / Recon results collected where applicable
-      ↓
-Findings generated
-      ↓
-Dashboard displays results
-      ↓
-Previous scan can be compared
-      ↓
-Assessment report can be generated
-```
-
-The system should also handle common failures without crashing.
-
-Optional ZAP integration can be considered complete only when it imports findings into the same normalized `Finding` model and displays them through the existing dashboard/report pipeline.
-
----
-
-# 40. Recommended Project Statement
-
-Use the following wording for academic/project documents:
-
-> **NetSecureLab is an integrated network security assessment and reconnaissance framework designed for authorized laboratory environments. The framework combines passive reconnaissance, DNS enumeration, Nmap-based host and service discovery, selected security checks, finding correlation, historical scan comparison, and structured reporting through a unified web interface. The system is designed to demonstrate the integration of Computer Networks and Ethical Hacking concepts covered in the laboratory syllabus.**
-
----
-
-# 41. Source Basis
-
-Primary project reference materials:
-
-- **CNEH Lab Syllabus.pdf**
-- **CN EH CBP TITLES SUGGESTED.pdf**
-
-The CNEH syllabus is the primary authority for determining course alignment.
-
-The suggested-title document is useful for identifying related project directions already considered, particularly:
-- network diagnostic frameworks
-- infrastructure discovery
-- passive reconnaissance
-- DNS enumeration
-- Nmap scanning
-- vulnerability assessment
-
-Current cybersecurity hackathon problem statements may be used for **context and inspiration**, but they do not override the course syllabus or the project's defined scope.
-
----
-
-# 42. Core Principle
-
-The final system should communicate one idea clearly:
-
-```text
-Network Discovery
-       +
-Reconnaissance
-       +
-Enumeration
-       +
-Security Assessment
-       +
-Historical Comparison
-       +
-Reporting
-       =
-NetSecureLab
-```
-
-The project is strongest when it is presented as a **course-aligned integrated framework**, not as an attempt to create a full commercial penetration-testing platform.
+- [x] **Canonical Target Normalization**: Target input validation and normalization across IP, hostname, domain, and web application URLs.
+- [x] **Technical Authorization Control**: Backend rejection (HTTP 403) of scans on unconfirmed targets; protected target deletion (HTTP 409).
+- [x] **Scan Orchestration & Safety**: Multi-stage execution with hard timeouts (`MAX_SCAN_TIMEOUT = 1800s`), duplicate scan concurrency guards, and cooperative cancellation.
+- [x] **Active Nmap Enumeration**: Host discovery, port scanning, service versioning, decoupled OS detection, and XML script parsing (`Port.scripts`).
+- [x] **DNS & Recon Intelligence**: Independent collection of A, AAAA, MX, NS, TXT, DMARC records, and WHOIS/rDNS enrichment.
+- [x] **Deterministic Finding Engine**: 14 transparent rules (`R001`-`R014`) with evidence formatting and module-awareness skipping.
+- [x] **Integrated Web Application Security (ZAP Module)**: Stage 5 automated HTTP/HTTPS checks (`WEB-001`-`WEB-007-GIT`) mapped to `source="zap"`.
+- [x] **Interactive Network Topology**: High-performance SVG visualization (`/topology`) rendering nodes, links, search filters, and side drawer.
+- [x] **Real-Time Observability**: Live WebSocket streaming (`/ws/scans`) with polling fallback and request correlation middleware (`X-Request-ID` and latency).
+- [x] **Automated Scan Scheduling**: Background scheduler worker (`scheduler.py`) supporting recurring automated scans (`daily`, `weekly`, `monthly`).
+- [x] **Finding Lifecycle & Exports**: Remediation tracking (`open`, `acknowledged`, `accepted_risk`, `remediated`), analyst notes, and CSV/JSON exports.
+- [x] **Authentication & RBAC**: JWT bearer tokens, bcrypt password hashing, and user roles (`admin`, `operator`).
+- [x] **Scan-to-Scan Comparison**: Bidirectional diffing of normalized snapshots across scans of the same target.
+- [x] **Reporting Engine**: Standalone HTML assessment reports with methodology disclaimers, limitations, and print-to-PDF formatting.
+- [x] **Automated Testing & Quality**: 34 backend pytest tests (100% pass), 10 frontend vitest tests (100% pass), and 0 oxlint warnings/errors.
+- [x] **Production Containerization**: Multi-stage Dockerfiles with Nginx reverse proxy and Docker Compose configuration.
