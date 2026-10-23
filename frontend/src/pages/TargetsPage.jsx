@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Crosshair,
@@ -46,7 +46,7 @@ export function TargetsPage() {
     try {
       setLoading(true);
       const data = await targetService.listTargets();
-      setTargets(data);
+      setTargets(Array.isArray(data) ? data : []);
     } catch {
       setErrorMsg('Failed to load targets from backend');
     } finally {
@@ -59,8 +59,13 @@ export function TargetsPage() {
   }, [fetchTargets]);
 
   const handleCreateTarget = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMsg('');
+
+    if (!addForm.name.trim() || !addForm.target.trim()) {
+      setErrorMsg('Target name and target value are required.');
+      return;
+    }
 
     if (!addForm.authorization_confirmed) {
       setErrorMsg('You must explicitly confirm technical authorization to add this target.');
@@ -116,8 +121,8 @@ export function TargetsPage() {
 
   const filteredTargets = targets.filter(
     (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.target.toLowerCase().includes(search.toLowerCase())
+      (t.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (t.target || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
