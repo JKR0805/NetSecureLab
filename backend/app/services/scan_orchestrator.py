@@ -92,11 +92,16 @@ def run_scan(scan_id: int):
         # STAGE 1: Nmap Network Discovery & Service Enumeration
         # -------------------------------------------------------------
         logger.info(f"[Scan {scan_id}] Stage 1: Running Nmap ({scan.profile})...")
+        nmap_kwargs = {}
+        if normalized.port:
+            nmap_kwargs["target_port"] = normalized.port
+
         nmap_result = execute_nmap_scan(
             scan_target=normalized.scan_target,
             profile=scan.profile,
             output_xml_path=xml_path,
             timeout=settings.SCAN_TIMEOUT,
+            **nmap_kwargs,
         )
 
         if nmap_result.success and xml_path.exists():

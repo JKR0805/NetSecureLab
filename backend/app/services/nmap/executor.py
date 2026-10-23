@@ -26,13 +26,18 @@ def execute_nmap_scan(
     profile: str,
     output_xml_path: Path,
     timeout: Optional[int] = None,
+    target_port: Optional[int] = None,
 ) -> NmapExecutionResult:
     """
     Executes Nmap via subprocess with shell=False and strict argument list construction.
     Output path is managed by the backend.
     """
     timeout = timeout or settings.SCAN_TIMEOUT
-    profile_args = settings.SCAN_PROFILES.get(profile, ["-sV", "-T4", "--top-ports", "1000"])
+    profile_args = list(settings.SCAN_PROFILES.get(profile, ["-sV", "-T4", "--top-ports", "1000"]))
+
+    # If target specifies a custom port and profile is standard, ensure that port is probed
+    if target_port and profile == "standard":
+        profile_args = ["-sV", "-T4", "-p", str(target_port)]
 
     # Ensure output directory exists
     output_xml_path.parent.mkdir(parents=True, exist_ok=True)

@@ -79,12 +79,20 @@ class TargetNormalizer:
             except ValueError:
                 host_is_ip = False
 
+            # When running inside Docker container, loopback addresses (127.0.0.1, localhost)
+            # refer to the container itself; translate to host.docker.internal to reach host services.
+            from pathlib import Path
+            scan_host = host
+            if host in ("127.0.0.1", "localhost") and Path("/.dockerenv").exists():
+                scan_host = "host.docker.internal"
+                host_is_ip = False
+
             return NormalizedTarget(
                 original=raw,
                 target_type="web_application",
-                scan_target=host,
-                hostname=host,
-                dns_name=host if not host_is_ip else None,
+                scan_target=scan_host,
+                hostname=scan_host,
+                dns_name=scan_host if not host_is_ip else None,
                 is_ip=host_is_ip,
                 scheme=parsed_scheme,
                 port=parsed_port,

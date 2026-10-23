@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session
 from app.models.scan import Scan
@@ -6,7 +7,7 @@ from app.models.asset import Asset
 from app.models.finding import Finding
 from app.utils.logger import logger
 
-COMMON_WEB_PORTS = {80, 443, 8000, 8080, 8443, 8888, 3000, 5000}
+COMMON_WEB_PORTS = {80, 443, 8000, 8080, 8085, 8443, 8888, 3000, 5000}
 
 
 def inspect_http_endpoint(
@@ -212,6 +213,8 @@ def run_web_assessment(scan_id: int, db: Session) -> List[Finding]:
     # Map of (asset_id, endpoint_url) to test
     endpoints_to_test: List[Dict[str, Any]] = []
 
+    is_docker = Path("/.dockerenv").exists()
+
     for asset in assets:
         for port in asset.ports:
             if port.state != "open":
@@ -221,14 +224,30 @@ def run_web_assessment(scan_id: int, db: Session) -> List[Finding]:
                 is_https = port.port_number in (443, 8443) or "https" in svc or "ssl" in svc
                 scheme = "https" if is_https else "http"
                 host_str = asset.hostname if asset.hostname else asset.ip
+                if is_docker and host_str in ("127.0.0.1", "localhost"):
+                    host_str = "host.docker.internal"
                 url = f"{scheme}://{host_str}:{port.port_number}"
                 endpoints_to_test.append({
                     "asset_id": asset.id,
                     "url": url,
                 })
 
-    # If no open ports were identified, but target is a domain name, test standard web ports
-    if not endpoints_to_test and scan.target and getattr(scan.target, "target_type", "") in ("domain", "hostname", "web_application"):
+    # Always test declared target URL if target is a web_application
+    if scan.target and getattr(scan.target, "target_type", "") == "web_application":
+        target_val = getattr(scan.target, "target", "")
+        if target_val:
+            raw_url = target_val if target_val.startswith(("http://", "https://")) else f"http://{target_val}"
+            if is_docker:
+                for loopback in ("127.0.0.1", "localhost"):
+                    if loopback in raw_url:
+                        raw_url = raw_url.replace(loopback, "host.docker.internal")
+            endpoints_to_test.append({"asset_id": None, "url": raw_url})
+            # If target declared with https but server only listens on http, test http as well
+            if raw_url.startswith("https://"):
+                endpoints_to_test.append({"asset_id": None, "url": raw_url.replace("https://", "http://", 1)})
+
+    # If no open ports were identified, test domain/hostname fallback
+    elif not endpoints_to_test and scan.target and getattr(scan.target, "target_type", "") in ("domain", "hostname"):
         target_val = getattr(scan.target, "target", "")
         if target_val:
             endpoints_to_test.append({"asset_id": None, "url": f"https://{target_val}"})
